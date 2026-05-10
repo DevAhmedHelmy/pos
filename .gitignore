@@ -75,3 +75,4 @@ apps/pos/src-tauri/*.pub
 
 # Generated
 generated/
+node_modules
