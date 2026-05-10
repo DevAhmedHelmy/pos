@@ -1,0 +1,11 @@
+node_modules/
+dist/
+build/
+.next/
+coverage/
+target/
+.turbo/
+pnpm-lock.yaml
+*.min.js
+generated/
+prisma/generated/
