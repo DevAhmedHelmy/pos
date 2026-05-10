@@ -1,0 +1,29 @@
+{
+  "name": "@pos/admin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Next.js admin dashboard for warehouse management",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev --port 3000",
+    "start": "next start --port 3000",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf .next out"
+  },
+  "dependencies": {
+    "@pos/config": "workspace:*",
+    "@pos/shared": "workspace:*",
+    "@pos/ui": "workspace:*",
+    "next": "^15.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.3"
+  }
+}

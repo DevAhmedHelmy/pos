@@ -1,0 +1,77 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+!.next/static/
+!.next/server/
+
+# Rust / Tauri
+target/
+*.rlib
+*.prof*
+apps/pos/src-tauri/target/
+apps/pos/WixTools/
+apps/pos/gen/
+
+# TypeScript
+*.tsbuildinfo
+*.d.ts.map
+
+# Turbo
+.turbo/
+
+# Test coverage
+coverage/
+*.lcov
+
+# Databases
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Environment files — NEVER commit secrets
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# Editor
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+pnpm-debug.log*
+
+# Docker volumes (dev data)
+.docker-data/
+
+# Prisma
+prisma/generated/
+
+# Tauri updater keys
+apps/pos/src-tauri/*.key
+apps/pos/src-tauri/*.pub
+
+# Generated
+generated/

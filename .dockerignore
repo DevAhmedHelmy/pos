@@ -1,0 +1,17 @@
+node_modules/
+.git/
+.turbo/
+dist/
+build/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+apps/pos/
+*.db
+target/
+.docker-data/
+specs/
+.specify/
+.claude/

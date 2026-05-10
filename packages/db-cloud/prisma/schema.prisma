@@ -1,0 +1,264 @@
+// Cloud PostgreSQL schema — authoritative store for all POS data
+// Local SQLite schema is in packages/db-local (Drizzle ORM)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SyncStatusEnum {
+  PENDING
+  SYNCED
+  CONFLICT
+  ERROR
+  DEAD
+}
+
+enum RoleEnum {
+  CASHIER
+  SUPERVISOR
+  ADMIN
+}
+
+enum SaleStatusEnum {
+  DRAFT
+  HELD
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum ShiftStatusEnum {
+  OPEN
+  CLOSED
+}
+
+model Warehouse {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String
+  address   String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  products  Product[]
+  terminals Terminal[]
+  users     User[]
+  shifts    Shift[]
+  sales     Sale[]
+
+  @@map("warehouses")
+}
+
+model Terminal {
+  id          String    @id @default(uuid()) @db.Uuid
+  warehouseId String    @db.Uuid
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  label       String
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@map("terminals")
+}
+
+model User {
+  id          String    @id @default(uuid()) @db.Uuid
+  warehouseId String    @db.Uuid
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  username    String    @unique
+  nameAr      String
+  nameEn      String
+  pinHash     String
+  role        RoleEnum  @default(CASHIER)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@map("users")
+}
+
+model Product {
+  id          String    @id @default(uuid()) @db.Uuid
+  localId     String?   @unique
+  warehouseId String    @db.Uuid
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  barcode     String    @unique
+  sku         String    @unique
+  nameAr      String
+  nameEn      String
+  price       Decimal   @db.Decimal(15, 4)
+  taxRate     Decimal   @default(0) @db.Decimal(5, 4)
+  unit        String
+  isActive    Boolean   @default(true)
+  syncStatus  SyncStatusEnum @default(SYNCED)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([barcode])
+  @@index([sku])
+  @@index([warehouseId])
+  @@map("products")
+}
+
+model Shift {
+  id           String         @id @default(uuid()) @db.Uuid
+  localId      String?        @unique
+  warehouseId  String         @db.Uuid
+  warehouse    Warehouse      @relation(fields: [warehouseId], references: [id])
+  cashierId    String         @db.Uuid
+  terminalId   String
+  status       ShiftStatusEnum @default(OPEN)
+  openAt       DateTime
+  closeAt      DateTime?
+  openingCash  Decimal        @db.Decimal(15, 3)
+  closingCash  Decimal?       @db.Decimal(15, 3)
+  totalSales   Decimal        @default(0) @db.Decimal(15, 3)
+  totalRefunds Decimal        @default(0) @db.Decimal(15, 3)
+  totalCash    Decimal        @default(0) @db.Decimal(15, 3)
+  totalCard    Decimal        @default(0) @db.Decimal(15, 3)
+  syncStatus   SyncStatusEnum @default(PENDING)
+  syncedAt     DateTime?
+  version      Int            @default(1)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
+
+  sales Sale[]
+
+  @@index([warehouseId])
+  @@index([cashierId])
+  @@map("shifts")
+}
+
+model Sale {
+  id              String         @id @default(uuid()) @db.Uuid
+  localId         String?        @unique
+  shiftId         String         @db.Uuid
+  shift           Shift          @relation(fields: [shiftId], references: [id])
+  warehouseId     String         @db.Uuid
+  warehouse       Warehouse      @relation(fields: [warehouseId], references: [id])
+  cashierId       String         @db.Uuid
+  status          SaleStatusEnum @default(DRAFT)
+  subtotal        Decimal        @db.Decimal(15, 3)
+  invoiceDiscount Decimal        @default(0) @db.Decimal(15, 3)
+  tax             Decimal        @default(0) @db.Decimal(15, 3)
+  total           Decimal        @db.Decimal(15, 3)
+  paidCash        Decimal        @default(0) @db.Decimal(15, 3)
+  paidCard        Decimal        @default(0) @db.Decimal(15, 3)
+  changeDue       Decimal        @default(0) @db.Decimal(15, 3)
+  holdRef         String?
+  receiptNumber   String?        @unique
+  syncStatus      SyncStatusEnum @default(PENDING)
+  syncedAt        DateTime?
+  version         Int            @default(1)
+  createdAt       DateTime       @default(now())
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+
+  items    SaleItem[]
+  payments Payment[]
+  refunds  Refund[]
+
+  @@index([shiftId])
+  @@index([status])
+  @@index([receiptNumber])
+  @@map("sales")
+}
+
+model SaleItem {
+  id             String  @id @default(uuid()) @db.Uuid
+  localId        String?
+  saleId         String  @db.Uuid
+  sale           Sale    @relation(fields: [saleId], references: [id])
+  productId      String? @db.Uuid
+  snapshot       Json
+  quantity       Decimal @db.Decimal(15, 4)
+  unitPrice      Decimal @db.Decimal(15, 4)
+  discount       Json?
+  tax            Decimal @default(0) @db.Decimal(15, 3)
+  lineTotal      Decimal @db.Decimal(15, 3)
+  createdAt      DateTime @default(now())
+
+  @@index([saleId])
+  @@map("sale_items")
+}
+
+model Payment {
+  id        String   @id @default(uuid()) @db.Uuid
+  localId   String?
+  saleId    String   @db.Uuid
+  sale      Sale     @relation(fields: [saleId], references: [id])
+  method    String
+  amount    Decimal  @db.Decimal(15, 3)
+  reference String?
+  createdAt DateTime @default(now())
+
+  @@index([saleId])
+  @@map("payments")
+}
+
+model Refund {
+  id             String         @id @default(uuid()) @db.Uuid
+  localId        String?        @unique
+  originalSaleId String         @db.Uuid
+  sale           Sale           @relation(fields: [originalSaleId], references: [id])
+  cashierId      String         @db.Uuid
+  supervisorId   String         @db.Uuid
+  warehouseId    String         @db.Uuid
+  items          Json
+  total          Decimal        @db.Decimal(15, 3)
+  receiptNumber  String         @unique
+  syncStatus     SyncStatusEnum @default(PENDING)
+  syncedAt       DateTime?
+  version        Int            @default(1)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+
+  @@index([originalSaleId])
+  @@map("refunds")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  localId     String?  @unique
+  userId      String   @db.Uuid
+  action      String
+  entityType  String
+  entityId    String
+  warehouseId String   @db.Uuid
+  terminalId  String
+  beforeState Json?
+  afterState  Json?
+  syncStatus  SyncStatusEnum @default(PENDING)
+  timestamp   DateTime
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@map("audit_logs")
+}
+
+model StockMovement {
+  id          String   @id @default(uuid()) @db.Uuid
+  productId   String   @db.Uuid
+  warehouseId String   @db.Uuid
+  type        String
+  quantity    Decimal  @db.Decimal(15, 4)
+  reference   String?
+  referenceId String?
+  createdAt   DateTime @default(now())
+
+  @@index([productId, warehouseId])
+  @@map("stock_movements")
+}
